@@ -47,8 +47,7 @@
 /* USER CODE END Includes */
 
 #ifdef __GNUC__
-  /* With GCC, small printf (option LD Linker->Libraries->Small printf
-     set to 'Yes') calls __io_putchar() */
+
   #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 #else
   #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
@@ -87,24 +86,24 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 
-void application_handling(char *cmd);
+void application_handling(char *cmd);// change state according to commands
 
 void MPU6050_Init (void)
 {
 	uint8_t check, data;
     
-    HAL_I2C_Mem_Read(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), MPU6050_WHO_AM_I_REG, 1, &check, 1, 1000);
+    HAL_I2C_Mem_Read(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), MPU6050_WHO_AM_I_REG, 1, &check, 1, 1000); //check MPU
     
     if (check == 0x68)
     {
         data = 0x00;
-        HAL_I2C_Mem_Write(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), PWR_MGMT_1, 1, &data, 1, 1000);
+        HAL_I2C_Mem_Write(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), PWR_MGMT_1, 1, &data, 1, 1000); //Wakeup MPU
         data = 0x07;
-        HAL_I2C_Mem_Write(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), SMPLRT_DIV_REG, 1, &data, 1, 1000);
+        HAL_I2C_Mem_Write(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), SMPLRT_DIV_REG, 1, &data, 1, 1000); //choose rate
         data = 0x00;
-        HAL_I2C_Mem_Write(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), ACCEL_CONFIG, 1, &data, 1, 1000);//2g
+        HAL_I2C_Mem_Write(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), ACCEL_CONFIG, 1, &data, 1, 1000);//ACC 2g init_config 
         data = 0x00;
-        HAL_I2C_Mem_Write(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), GYRO_CONFIG, 1, &data, 1, 1000);//250dps
+        HAL_I2C_Mem_Write(&hi2c1, (SLAVE_ADDRESS_MPU6050 << 1), GYRO_CONFIG, 1, &data, 1, 1000);//Gero 250dps init_config
         
         HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
     }
@@ -116,7 +115,7 @@ void MPU6050_Init (void)
     
 }
 
-void MPU6050_GET_ACC (float* Ax, float* Ay, float* Az)
+void MPU6050_GET_ACC (float* Ax, float* Ay, float* Az) //Get ACC Data
 {
     uint8_t data[6];
     int16_t Accel_X_RAW, Accel_Y_RAW, Accel_Z_RAW;
@@ -131,7 +130,7 @@ void MPU6050_GET_ACC (float* Ax, float* Ay, float* Az)
     *Az = Accel_Z_RAW / 16384.0;
 }
 
-void MPU6050_GET_GERO (float* Gx, float* Gy, float* Gz)
+void MPU6050_GET_GERO (float* Gx, float* Gy, float* Gz) //Get Gyro Data
 {
     uint8_t data[6];
     int16_t GERO_X_RAW, GERO_Y_RAW, GERO_Z_RAW;
@@ -146,7 +145,7 @@ void MPU6050_GET_GERO (float* Gx, float* Gy, float* Gz)
     *Gz = GERO_Z_RAW / 131.0;
 }
 
-void LCD_PRINT(const char A, float X, float Y, float Z, int l,int c)
+void LCD_PRINT(const char A, float X, float Y, float Z, int l,int c) //Write to LCD
 {
     char str[16];
     char pacc[64];
@@ -441,12 +440,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   /* Prevent unused argument(s) compilation warning */
   UNUSED(huart);
 
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_UART_RxCpltCallback can be implemented in the user file.
-   */
     switch(myUART_State)
     {
-        case UT_START:
+        case UT_START: //Waiting for the wright command that starts with '*' and ends with '#'
             if(rxbuf[0] == '*' && rxbuf[2] == '#')
             {
                 //prompt for a command recieve lenghth :: pruf of size
@@ -472,7 +468,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
                 HAL_UART_Receive_DMA(&huart4, (uint8_t*)rxbuf, 3);
             }
             break;
-        case UT_APP:
+        case UT_APP: //process the command
             application_handling(rxbuf);
             memset(rxbuf, sizeof(rxbuf), 0);
             //get back to state START
